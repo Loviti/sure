@@ -1,5 +1,8 @@
 import { Controller } from "@hotwired/stimulus";
 
+const PLAID_SCRIPT_URL =
+  "https://cdn.plaid.com/link/v2/stable/link-initialize.js";
+
 // Connects to data-controller="plaid"
 export default class extends Controller {
   static values = {
@@ -10,7 +13,36 @@ export default class extends Controller {
   };
 
   connect() {
-    this.open();
+    this.loadPlaidScript().then(() => this.open());
+  }
+
+  loadPlaidScript() {
+    // If Plaid is already loaded, resolve immediately
+    if (typeof Plaid !== "undefined") {
+      return Promise.resolve();
+    }
+
+    // Check if script is already being loaded
+    const existingScript = document.querySelector(
+      `script[src="${PLAID_SCRIPT_URL}"]`
+    );
+    if (existingScript) {
+      return new Promise((resolve) => {
+        existingScript.addEventListener("load", resolve);
+        // In case it already loaded
+        if (typeof Plaid !== "undefined") resolve();
+      });
+    }
+
+    // Load the script
+    return new Promise((resolve, reject) => {
+      const script = document.createElement("script");
+      script.src = PLAID_SCRIPT_URL;
+      script.async = true;
+      script.onload = resolve;
+      script.onerror = reject;
+      document.head.appendChild(script);
+    });
   }
 
   open() {
